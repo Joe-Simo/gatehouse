@@ -101,4 +101,6 @@ export type Screening = {
   cost: Cost;
   ms: number | null;
   screenedAt: string;
+  /** Set when the demo shows a recorded Clocked answer instead of a live one. */
+  recordedAt?: string;
 };

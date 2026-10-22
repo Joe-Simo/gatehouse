@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ClockedError, clockedConfigured, runPipeline } from "@/lib/clocked";
 import { IssueFetchError, fetchIssue, parseIssueUrl } from "@/lib/github";
+import { canSpend, record } from "@/lib/budget";
 import { allow, cacheKey, cached, remember } from "@/lib/limits";
+import { recordedScreening } from "@/lib/recorded";
 import { MAX_CHARS, buildPipeline, interpret, issueText } from "@/lib/screen";
 import type { Issue, Screening } from "@/lib/types";
 
@@ -50,9 +52,17 @@ export async function POST(req: NextRequest) {
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
   if (!allow(ip)) return fail(429, "That is a lot of screening. Try again in a few minutes.");
 
+  if (!(await canSpend())) {
+    // The examples still work from their recorded Clocked answers, labelled as such.
+    const rec = recordedScreening(issue);
+    if (rec) return NextResponse.json({ ...rec, issue: { ...rec.issue, source: issue.source } });
+    return fail(503, "Today's screening budget for this public demo is used up. It resets at midnight UTC. The three examples still show their recorded Clocked results.");
+  }
+
   try {
     const { body } = buildPipeline(issue);
     const { data, cost } = await runPipeline(body);
+    await record(cost.credits);
     const screening = interpret(issue, data, cost);
     remember(key, screening);
     return NextResponse.json(screening);

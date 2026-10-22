@@ -227,7 +227,7 @@ function Result({ s, copied, onCopy }: { s: Screening; copied: boolean; onCopy: 
               <article key={i} className={`script ${tone}`}>
                 <header>
                   <span>Script {i + 1}{c.block.lang ? `, ${c.block.lang}` : ""}</span>
-                  <span>{r ? `${tone === "forward" ? "Routine" : r.verdict}${r.category && tone !== "forward" ? `: ${r.category}` : ""}${r.severity && r.severity !== "none" ? `, ${r.severity}` : ""} (${pct(r.malicious)} malicious)` : c.error}</span>
+                  <span>{r ? `${tone === "forward" ? "Routine" : r.verdict}${r.category && tone !== "forward" ? `: ${r.category}` : ""}${r.severity && r.severity !== "none" && tone !== "forward" ? `, ${r.severity}` : ""} (${pct(r.malicious)} malicious)` : c.error}</span>
                 </header>
                 {r?.evidence?.length ? (
                   <ul>{r.evidence.map((e, j) => <li key={j}><code>{e.line}</code></li>)}</ul>
@@ -239,6 +239,9 @@ function Result({ s, copied, onCopy }: { s: Screening; copied: boolean; onCopy: 
       )}
 
       {cost && <p className="quiet meta">One Clocked pipeline: {cost}.</p>}
+      {s.recordedAt && (
+        <p className="quiet meta">Today&apos;s live screening budget is used up, so this is the real Clocked answer recorded for this example on {s.recordedAt.slice(0, 10)}.</p>
+      )}
     </section>
   );
 }

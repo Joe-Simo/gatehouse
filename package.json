@@ -15,6 +15,7 @@
   },
   "packageManager": "pnpm@10.34.6",
   "dependencies": {
+    "@vercel/blob": "^2.8.2",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",

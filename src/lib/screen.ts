@@ -3,7 +3,7 @@ import { guardDecision, isFlagged, scriptDecision, worst } from "./policy";
 import { applyEdits, placeholder, type Edit } from "./redact";
 import type {
   Cost, Decision, GuardResult, Issue, PiiResult, PipelineResponse,
-  PipelineStep, Reason, ScriptCheck, ScriptResult, Screening,
+  PipelineStep, Reason, ScriptCheck, ScriptResult, Screening, Span,
 } from "./types";
 
 export const MAX_CHARS = 20_000;
@@ -62,6 +62,25 @@ function stepError(s: PipelineStep | undefined): string | null {
   return null;
 }
 
+/**
+ * Guard often returns one evidence span per sentence of the same passage.
+ * Spans separated only by whitespace become one cut, so the agent copy reads
+ * "[removed ...]" once per passage, not once per sentence.
+ */
+export function mergeSpans(text: string, spans: Span[]): Span[] {
+  const sorted = [...spans].sort((a, b) => a.start - b.start);
+  const out: Span[] = [];
+  for (const s of sorted) {
+    const last = out[out.length - 1];
+    if (last && (s.start <= last.end || /^\s*$/.test(text.slice(last.end, s.start)))) {
+      last.end = Math.max(last.end, s.end);
+    } else {
+      out.push({ start: s.start, end: s.end });
+    }
+  }
+  return out;
+}
+
 /** Turn one pipeline answer into a decision, the evidence, and the agent copy. */
 export function interpret(
   issue: Issue,
@@ -104,12 +123,16 @@ export function interpret(
     reasons.push({ tone: "forward", text: `${hidden.length} hidden HTML ${hidden.length === 1 ? "comment" : "comments"} removed. ${hidden.length === 1 ? "It is" : "They are"} invisible on GitHub, but an agent reads ${hidden.length === 1 ? "it" : "them"}.` });
   }
 
+  if (decision === "hold" && guard && isFlagged(guard.verdict) && guard.residual_verdict && !isFlagged(guard.residual_verdict)) {
+    reasons[0] = { ...reasons[0], text: `${reasons[0].text} A cut copy is ready for review.` };
+  }
+
   let agentCopy: string | null = null;
   if (decision !== "block") {
     const edits: Edit[] = [
       ...hidden.map((h) => ({ ...h, with: "", rank: 1 })),
       ...found.map((e) => ({ start: e.start, end: e.end, with: placeholder(e.type), rank: 2 })),
-      ...(guard && isFlagged(guard.verdict) ? guard.evidence ?? [] : []).map((e) => ({
+      ...mergeSpans(issue.text, guard && isFlagged(guard.verdict) ? guard.evidence ?? [] : []).map((e) => ({
         start: e.start, end: e.end, with: `[removed by Gatehouse: ${guard?.category ?? "injection"}]`, rank: 3,
       })),
       ...checks

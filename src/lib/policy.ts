@@ -34,7 +34,7 @@ export function guardDecision(g: GuardResult | null, error: string | null): { de
     if (g.residual_verdict && !isFlagged(g.residual_verdict)) {
       return {
         decision: "hold",
-        reasons: [{ tone: "hold", text: `Injection found (${category}, ${pct(g.injection)}). With the flagged text removed the rest reads clean (${pct(g.residual ?? 0)}), so a cut copy is ready for review.` }],
+        reasons: [{ tone: "hold", text: `Injection found (${category}, ${pct(g.injection)}). With the flagged text removed the rest reads clean (${pct(g.residual ?? 0)}).` }],
       };
     }
     return {
