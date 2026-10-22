@@ -56,6 +56,10 @@ The Clocked key stays on the server. The public demo limits each visitor to 10 s
 - Public issues only when fetching by link. Comments are not screened yet, only the title and body.
 - The example issues in the app are fictional.
 
+## Credits
+
+The files in `test/fixtures` are recorded example responses published in the [Clocked documentation](https://clocked.rezolve.ai/docs/pipeline), used to test that Gatehouse reads real response shapes. Built with Next.js, React, zod and Vitest.
+
 ## AI use
 
 This project was built with the help of an AI coding assistant, which wrote much of the code and copy under human direction. Screening decisions in the running app come from Clocked's models plus the plain rules in `src/lib/policy.ts`; Gatehouse uses no other AI model.
