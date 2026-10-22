@@ -1,0 +1,20 @@
+Live smoke test against https://gatehouse-sand.vercel.app/api/screen
+Run Thu Oct 22, 2026, about 4:30 PM PT, on the production deployment with the real Clocked key.
+Times are full round trips from the box, including Vercel and Clocked.
+
+
+honest: forward (expected forward) in 1072 ms, 9 credits
+  [forward] No injection (5%).
+  [forward] The script read as routine.
+  [forward] 4 items of personal data masked (secret, email, phone, person).
+
+hidden: hold (expected hold or block) in 551 ms, 6 credits
+  [hold] Injection found (tool misuse or data exfiltration, 100%). With the flagged text removed the rest reads clean (7%). A cut copy is ready for review.
+  [forward] 1 hidden HTML comment removed. It is invisible on GitHub, but an agent reads it.
+
+repro: block (expected block) in 701 ms, 7 credits
+  [hold] Injection found (tool misuse or data exfiltration, 100%). With the flagged text removed the rest reads clean (0%).
+  [block] Script 1 (bash): data exfiltration (100%, critical).
+
+real public issue by link: https://github.com/vercel/next.js/issues/48748 (9,165 characters)
+  forward, injection 5%, 35 credits ($0.006972). Protect masked one handle (person) and 0.0.0.0 (ip_address).

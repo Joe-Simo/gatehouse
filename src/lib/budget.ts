@@ -8,8 +8,8 @@ import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
 // kept in memory.
 
 export const DAILY_CREDITS = Number(process.env.GATEHOUSE_DAILY_CREDITS ?? 600);
-/** A pipeline for a typical issue costs 8 to 11 credits; plan for a large one. */
-export const RESERVE_PER_SCREENING = 25;
+/** The examples cost 6 to 11 credits a screening and a long real issue about 35; plan for that. */
+export const RESERVE_PER_SCREENING = 40;
 
 type Usage = { day: string; credits: number; screenings: number };
 
