@@ -147,7 +147,7 @@ export function Gatehouse() {
           <li>Anything close to a threshold is held for a person, not guessed.</li>
         </ol>
         <p className="quiet">All three run in one Clocked pipeline request. For agents and CI there is a JSON API:</p>
-        <pre className="code">{`curl -X POST https://gatehouse-app.vercel.app/api/screen \\
+        <pre className="code">{`curl -X POST https://gatehouse-sand.vercel.app/api/screen \\
   -H "Content-Type: application/json" \\
   -d '{"url":"https://github.com/owner/repo/issues/123"}'`}</pre>
       </section>

@@ -1,6 +1,6 @@
 # Gatehouse
 
-Screen a GitHub issue before your coding agent reads it.
+Screen a GitHub issue before your coding agent reads it. Live at [gatehouse-sand.vercel.app](https://gatehouse-sand.vercel.app).
 
 Coding agents now triage issues, reproduce bugs and open pull requests on their own. Issues are written by anyone on the internet, and an agent acts on what it reads, including text that is hidden from people (HTML comments do not render on github.com) and scripts that "fix" a bug by shipping your keys somewhere else.
 
@@ -29,7 +29,7 @@ The policies Clocked reads are in [`src/lib/screen.ts`](src/lib/screen.ts). The 
 ## JSON API
 
 ```sh
-curl -X POST https://<your-deployment>/api/screen \
+curl -X POST https://gatehouse-sand.vercel.app/api/screen \
   -H "Content-Type: application/json" \
   -d '{"url":"https://github.com/owner/repo/issues/123"}'
 ```
