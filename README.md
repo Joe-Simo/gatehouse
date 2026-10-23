@@ -2,6 +2,8 @@
 
 Screen a GitHub issue before your coding agent reads it. Live at [gatehouse-sand.vercel.app](https://gatehouse-sand.vercel.app).
 
+Demo video (85 seconds): [vimeo.com/1238589955](https://vimeo.com/1238589955). The narration is a synthetic voice.
+
 Coding agents now triage issues, reproduce bugs and open pull requests on their own. Issues are written by anyone on the internet, and an agent acts on what it reads, including text that is hidden from people (HTML comments do not render on github.com) and scripts that "fix" a bug by shipping your keys somewhere else.
 
 Gatehouse sits between the two. Give it an issue link or the issue text and it answers with one of three words:
