@@ -103,4 +103,6 @@ export type Screening = {
   screenedAt: string;
   /** Set when the demo shows a recorded Clocked answer instead of a live one. */
   recordedAt?: string;
+  /** Why the recorded answer is shown: today's credit budget is spent, or Clocked did not answer. */
+  recordedBecause?: "budget" | "unavailable";
 };

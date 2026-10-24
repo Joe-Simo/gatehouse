@@ -27,9 +27,10 @@ export async function fetchIssue(ref: IssueRef): Promise<{ title: string; body: 
     signal: AbortSignal.timeout(10_000),
     next: { revalidate: 60 },
   });
-  if (res.status === 404) throw new IssueFetchError("That issue was not found, or the repository is private.");
+  if (res.status === 404) throw new IssueFetchError("That issue was not found, or the repository is private. Paste the issue text instead.");
+  if (res.status === 410) throw new IssueFetchError("That issue was deleted.");
   if (res.status === 403 || res.status === 429) throw new IssueFetchError("GitHub is rate limiting requests. Paste the issue text instead.");
-  if (!res.ok) throw new IssueFetchError(`GitHub answered ${res.status}.`);
+  if (!res.ok) throw new IssueFetchError(`GitHub could not return that issue (${res.status}). Paste the issue text instead.`);
   const json = (await res.json()) as { title?: string; body?: string | null; html_url?: string };
   return { title: json.title ?? "", body: json.body ?? "", url: json.html_url ?? `https://github.com/${ref.owner}/${ref.repo}/issues/${ref.number}` };
 }

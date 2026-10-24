@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { parseIssueUrl } from "@/lib/github";
 import { ranges, segments, type Mark } from "@/lib/highlight";
 import { SAMPLES } from "@/lib/samples";
+import { MAX_CHARS, issueText } from "@/lib/screen";
 import type { Decision, Screening } from "@/lib/types";
 
 type Mode = "link" | "paste";
@@ -24,6 +26,15 @@ function pct(n: number) {
   return `${Math.round(n * 100)}%`;
 }
 
+/** The server's error message, or a plain one when the answer is not JSON (a timeout page, a dropped connection). */
+async function readAnswer(res: Response): Promise<{ ok: true; json: Screening } | { ok: false; error: string }> {
+  const json = (await res.json().catch(() => null)) as (Screening & { error?: string }) | null;
+  if (res.ok && json && !json.error) return { ok: true, json };
+  if (json?.error) return { ok: false, error: json.error };
+  if (res.status === 504) return { ok: false, error: "Screening took too long. Try again in a moment." };
+  return { ok: false, error: "Gatehouse did not answer properly. Try again in a moment." };
+}
+
 export function Gatehouse() {
   const [mode, setMode] = useState<Mode>("paste");
   const [url, setUrl] = useState("");
@@ -34,11 +45,20 @@ export function Gatehouse() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Screening | null>(null);
   const [connected, setConnected] = useState<boolean | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [budget, setBudget] = useState<boolean | null>(null);
+  const [copied, setCopied] = useState<"yes" | "failed" | null>(null);
 
   useEffect(() => {
-    fetch("/api/screen").then((r) => r.json()).then((j) => setConnected(!!j.connected)).catch(() => setConnected(null));
+    fetch("/api/screen")
+      .then((r) => r.json())
+      .then((j) => { setConnected(!!j.connected); setBudget(j.budget === false ? false : true); })
+      .catch(() => setConnected(null));
   }, []);
+
+  function switchMode(m: Mode) {
+    setMode(m);
+    setError(null);
+  }
 
   function pick(id: string) {
     const s = SAMPLES.find((x) => x.id === id);
@@ -51,20 +71,29 @@ export function Gatehouse() {
     setError(null);
   }
 
+  const linkOk = parseIssueUrl(url) !== null;
+  const length = issueText(title, body).length;
+
   async function screen(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setCopied(false);
+    setCopied(null);
     try {
-      const res = await fetch("/api/screen", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mode === "link" ? { url } : { title, body }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Screening failed.");
-      setResult(json as Screening);
+      let res: Response;
+      try {
+        res = await fetch("/api/screen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(mode === "link" ? { url: url.trim() } : { title, body }),
+        });
+      } catch {
+        throw new Error("Could not reach Gatehouse. Check your connection and try again.");
+      }
+      const answer = await readAnswer(res);
+      if (!answer.ok) throw new Error(answer.error);
+      setResult(answer.json);
+      if (answer.json.recordedBecause === "budget") setBudget(false);
       requestAnimationFrame(() => document.getElementById("result")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     } catch (err) {
       setResult(null);
@@ -74,7 +103,7 @@ export function Gatehouse() {
     }
   }
 
-  const canSubmit = !busy && (mode === "link" ? url.trim().length > 0 : body.trim().length > 0);
+  const canSubmit = !busy && (mode === "link" ? linkOk : body.trim().length > 0 && length <= MAX_CHARS);
 
   return (
     <main className="page">
@@ -91,8 +120,14 @@ export function Gatehouse() {
       {connected === false && (
         <p className="notice" role="status">Gatehouse is not connected to Clocked yet, so screening is paused.</p>
       )}
+      {connected && budget === false && (
+        <p className="notice" role="status">
+          Today&apos;s live screening budget for this public demo is used up. The three examples show their recorded
+          Clocked answers until it resets at midnight UTC.
+        </p>
+      )}
 
-      <form className="panel" onSubmit={screen}>
+      <form className="panel" onSubmit={screen} aria-busy={busy}>
         <div className="samples" role="group" aria-label="Examples">
           {SAMPLES.map((s) => (
             <button key={s.id} type="button" className={`sample${active === s.id && mode === "paste" ? " on" : ""}`} onClick={() => pick(s.id)}>
@@ -103,14 +138,19 @@ export function Gatehouse() {
         </div>
 
         <div className="modes" role="tablist" aria-label="Input">
-          <button type="button" role="tab" aria-selected={mode === "paste"} className={mode === "paste" ? "on" : ""} onClick={() => setMode("paste")}>Paste the issue</button>
-          <button type="button" role="tab" aria-selected={mode === "link"} className={mode === "link" ? "on" : ""} onClick={() => setMode("link")}>Issue link</button>
+          <button type="button" role="tab" aria-selected={mode === "paste"} className={mode === "paste" ? "on" : ""} onClick={() => switchMode("paste")}>Paste the issue</button>
+          <button type="button" role="tab" aria-selected={mode === "link"} className={mode === "link" ? "on" : ""} onClick={() => switchMode("link")}>Issue link</button>
         </div>
 
         {mode === "link" ? (
           <label className="field">
             <span>Public GitHub issue</span>
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://github.com/owner/repo/issues/123" inputMode="url" autoComplete="off" spellCheck={false} />
+            <input value={url} onChange={(e) => { setUrl(e.target.value); setError(null); }} placeholder="https://github.com/owner/repo/issues/123" inputMode="url" autoComplete="off" spellCheck={false} aria-invalid={url.trim() !== "" && !linkOk} aria-describedby="link-hint" />
+            <small id="link-hint" className={`hint${url.trim() !== "" && !linkOk ? " bad" : ""}`}>
+              {url.trim() !== "" && !linkOk
+                ? "That is not an issue link. Use one like https://github.com/owner/repo/issues/123."
+                : "Public repositories only. Gatehouse reads the title and body, not the comments."}
+            </small>
           </label>
         ) : (
           <>
@@ -120,7 +160,13 @@ export function Gatehouse() {
             </label>
             <label className="field">
               <span>Body, as written in Markdown</span>
-              <textarea value={body} onChange={(e) => { setBody(e.target.value); setActive(null); }} rows={12} spellCheck={false} />
+              <textarea value={body} onChange={(e) => { setBody(e.target.value); setActive(null); }} rows={12} spellCheck={false} aria-describedby="length-hint" />
+              {length > MAX_CHARS * 0.9 && (
+                <small id="length-hint" className={`hint${length > MAX_CHARS ? " bad" : ""}`}>
+                  {length.toLocaleString("en-US")} of {MAX_CHARS.toLocaleString("en-US")} characters
+                  {length > MAX_CHARS ? ". Shorten the issue to screen it." : "."}
+                </small>
+              )}
             </label>
           </>
         )}
@@ -134,8 +180,12 @@ export function Gatehouse() {
 
       {result && <Result s={result} copied={copied} onCopy={async () => {
         if (!result.agentCopy) return;
-        await navigator.clipboard.writeText(result.agentCopy);
-        setCopied(true);
+        try {
+          await navigator.clipboard.writeText(result.agentCopy);
+          setCopied("yes");
+        } catch {
+          setCopied("failed");
+        }
       }} />}
 
       <section className="how">
@@ -160,7 +210,7 @@ export function Gatehouse() {
   );
 }
 
-function Result({ s, copied, onCopy }: { s: Screening; copied: boolean; onCopy: () => void }) {
+function Result({ s, copied, onCopy }: { s: Screening; copied: "yes" | "failed" | null; onCopy: () => void }) {
   const segs = useMemo(() => segments(s.issue.text, ranges(s)), [s]);
   const present = new Set(segs.flatMap((x) => x.marks));
   const v = VERDICT[s.decision];
@@ -209,7 +259,8 @@ function Result({ s, copied, onCopy }: { s: Screening; copied: boolean; onCopy: 
           {s.agentCopy != null ? (
             <>
               <pre className="issue copy">{s.agentCopy}</pre>
-              <button type="button" className="secondary" onClick={onCopy}>{copied ? "Copied" : "Copy safe text"}</button>
+              <button type="button" className="secondary" onClick={onCopy}>{copied === "yes" ? "Copied" : "Copy safe text"}</button>
+              {copied === "failed" && <p className="quiet" role="status">This browser blocked copying. Select the text above instead.</p>}
             </>
           ) : (
             <p className="withheld">Nothing. This issue stays with the maintainers.</p>
@@ -240,7 +291,12 @@ function Result({ s, copied, onCopy }: { s: Screening; copied: boolean; onCopy: 
 
       {cost && <p className="quiet meta">One Clocked pipeline: {cost}.</p>}
       {s.recordedAt && (
-        <p className="quiet meta">Today&apos;s live screening budget is used up, so this is the real Clocked answer recorded for this example on {s.recordedAt.slice(0, 10)}.</p>
+        <p className="quiet meta">
+          {s.recordedBecause === "unavailable"
+            ? "Clocked did not answer just now"
+            : "Today's live screening budget is used up"}
+          , so this is the real Clocked answer recorded for this example on {s.recordedAt.slice(0, 10)}.
+        </p>
       )}
     </section>
   );

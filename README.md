@@ -1,8 +1,12 @@
 # Gatehouse
 
-Screen a GitHub issue before your coding agent reads it. Live at [gatehouse-sand.vercel.app](https://gatehouse-sand.vercel.app).
+Screen a GitHub issue before your coding agent reads it. Paste an issue or its link and Gatehouse answers Forward, Hold or Block, using Clocked Guard, Inspect and Protect in one request.
 
-Demo video (85 seconds): [vimeo.com/1238589955](https://vimeo.com/1238589955). The narration is a synthetic voice.
+**Try it:** [gatehouse-sand.vercel.app](https://gatehouse-sand.vercel.app) &nbsp; **Watch it (85 s):** [vimeo.com/1238589955](https://vimeo.com/1238589955), narrated by a synthetic voice.
+
+[![Gatehouse holding an issue: a hidden HTML comment tells AI assistants to send the repository secrets elsewhere. Guard flags it, and the copy for the agent has it cut out.](docs/screenshots/hero.png)](https://gatehouse-sand.vercel.app)
+
+*A real Clocked answer on the "hidden instruction" example: the HTML comment is invisible on github.com, Guard flags it, and the agent gets the issue with it cut out.*
 
 Coding agents now triage issues, reproduce bugs and open pull requests on their own. Issues are written by anyone on the internet, and an agent acts on what it reads, including text that is hidden from people (HTML comments do not render on github.com) and scripts that "fix" a bug by shipping your keys somewhere else.
 
@@ -40,7 +44,7 @@ These are real Clocked answers, recorded on Thu Oct 22, 2026 with the live key. 
 
 A real public issue, [vercel/next.js#48748](https://github.com/vercel/next.js/issues/48748) (9,165 characters), was forwarded with no injection (5%) for 35 credits ($0.007). The Clocked pipeline itself took 0.2 to 0.3 s; full round trips from a browser were 0.5 to 1.1 s.
 
-Screenshots: [hold](docs/screenshots/hold.png), [block](docs/screenshots/block.png), [forward](docs/screenshots/forward.png).
+Full-page screenshots: [hold](docs/screenshots/hold.png), [block](docs/screenshots/block.png), [forward](docs/screenshots/forward.png).
 
 What the real answers changed in Gatehouse:
 
@@ -71,7 +75,7 @@ pnpm dev
 
 Without a key the app runs and says it is not connected. `pnpm test` runs the unit tests, which use the live responses recorded above and the example responses published in the Clocked docs. `node scripts/mock-clocked.mjs` starts a crude local stand-in for checking the interface without spending credits (set `CLOCKED_BASE_URL=http://localhost:4010/clocked`); its answers are string matches, not Clocked results.
 
-The Clocked key stays on the server. The public demo limits each visitor to 10 screenings per 10 minutes, caches identical issues for an hour, and shares one daily budget of Clocked credits across all visitors (600 by default, `GATEHOUSE_DAILY_CREDITS`). The counter lives in a private Vercel Blob (`BLOB_READ_WRITE_TOKEN`) and is updated with conditional writes; without a token it falls back to memory. When the day's budget is spent, the three examples show their recorded Clocked results, marked as recorded, and anything else is refused until midnight UTC. If the counter cannot be read, Gatehouse refuses rather than spends.
+The Clocked key stays on the server. The public demo limits each visitor to 10 screenings per 10 minutes, caches identical issues for an hour, and shares one daily budget of Clocked credits across all visitors (600 by default, `GATEHOUSE_DAILY_CREDITS`). The counter lives in a private Vercel Blob (`BLOB_READ_WRITE_TOKEN`) and is updated with conditional writes; without a token it falls back to memory. When the day's budget is spent, the three examples show their recorded Clocked results, marked as recorded, and anything else is refused until midnight UTC. If the counter cannot be read, Gatehouse refuses rather than spends. If Clocked does not answer (three tries within 75 seconds), the examples show their recorded results with that reason, and any other issue gets a plain "try again" message; nothing is ever forwarded unscreened.
 
 ## Limits
 

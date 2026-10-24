@@ -64,6 +64,9 @@ h1 { margin: 0 0 16px; font-size: clamp(30px, 4.4vw, 44px); line-height: 1.1; le
 }
 .field textarea { font-family: var(--mono); font-size: 13px; line-height: 1.55; resize: vertical; }
 .field input:focus, .field textarea:focus { border-color: #9a9a96; box-shadow: 0 0 0 3px rgb(0 0 0 / 0.05); }
+.hint { display: block; margin-top: 6px; font-size: 13px; color: var(--soft); }
+.hint.bad { color: var(--block); }
+.field input[aria-invalid="true"] { border-color: var(--block); }
 
 .actions { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
 .primary, .secondary {
